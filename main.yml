@@ -1,0 +1,41 @@
+- name: Main
+  hosts: vms
+  tasks:
+    - name: Install packages
+      become: true
+      apt:
+        update_cache: true
+        cache_valid_time: 3600
+        pkg:
+          - git
+          - libsdl2-dev
+
+    - name: Clone jc_reborn repository
+      git:
+        repo: 'https://github.com/jno6809/jc_reborn.git'
+        dest: "{{ ansible_facts['env']['HOME'] }}/jc_reborn"
+        accept_hostkey: true
+
+    - name: Get Johnny Castaway resources
+      ansible.builtin.unarchive:
+        src: https://test.bert.org/johnny.zip
+        dest: "{{ ansible_facts['env']['HOME'] }}/jc_reborn"
+        remote_src: yes
+
+    - name: Build jc_reborn
+      community.general.make:
+        chdir: "{{ ansible_facts['env']['HOME'] }}/jc_reborn"
+        file: "{{ ansible_facts['env']['HOME'] }}/jc_reborn/Makefile.linux"
+
+    - name: Setup autologin for the user
+      ansible.builtin.command: sudo raspi-config nonint do_boot_behaviour B2
+      become: yes
+
+    - name: Creating a file with content
+      copy:
+        dest: "{{ ansible_facts['env']['HOME'] }}/.bash_profile"
+        content: |
+          if [ -z "$SSH_CONNECTION" ]; then
+            cd jc_reborn
+            exec ./jc_reborn hotkeys
+          fi

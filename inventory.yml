@@ -1,0 +1,11 @@
+vms:
+  hosts:
+    pilocal:
+      ansible_user: bertrand
+      ansible_host: localhost
+      ansible_port: 2222
+      ansible_python_interpreter: /usr/bin/python3
+    pijohnny:
+      ansible_user: bertrand
+      ansible_host: pijohnny
+      ansible_python_interpreter: /usr/bin/python3
