@@ -2,7 +2,7 @@
 
 Install Johnny Castaway on a Raspberry Pi using Ansible
 
-It builds [a fork of jc_reborn](https://github.com/bertrandom/jc_reborn/tree/web-control), an open source engine for the 1992 Johnny Castaway screen saver, and runs it full screen on the Pi's HDMI output. The fork adds a web page for changing settings and controlling Johnny, and a night mode that turns the display off at night.
+It builds [a fork of jc_reborn](https://github.com/bertrandom/jc_reborn), an open source engine for the 1992 Johnny Castaway screen saver, and runs it full screen on the Pi's HDMI output. The fork adds a web page for changing settings and controlling Johnny, and a night mode that turns the display off at night.
 
 ## Installation
 
@@ -58,7 +58,7 @@ curl -X POST http://pijohnny/api/toggle-pause
 curl -d nightStart=22:00 -d nightEnd=08:00 http://pijohnny/api/settings
 ```
 
-See the [fork's README](https://github.com/bertrandom/jc_reborn/tree/web-control#web-control-and-night-mode) for the full list. Normally only root can listen on port 80, so the service grants `johnny` just that one permission (`AmbientCapabilities=CAP_NET_BIND_SERVICE`).
+See the [fork's README](https://github.com/bertrandom/jc_reborn#web-control-and-night-mode) for the full list. Normally only root can listen on port 80, so the service grants `johnny` just that one permission (`AmbientCapabilities=CAP_NET_BIND_SERVICE`).
 
 There's no password: anyone on your network can change settings or quit Johnny (systemd restarts it).
 
