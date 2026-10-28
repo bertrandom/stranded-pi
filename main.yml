@@ -3,14 +3,19 @@
   become: true
   vars:
     jc_dir: /opt/jc_reborn
-    jc_version: 524a5803e4fa65f840379c781f40ce39a927032e
+    jc_repo: https://github.com/bertrandom/jc_reborn.git
+    jc_version: 28bab375c303f6fc1b07f5a49f3c2ec9e3edf838
     jc_resources_url: https://test.bert.org/johnny.zip
     jc_resources_checksum: sha256:4db347c0f57a4d92bad23234cc91034eeef5073d92a79e5ec1e0461f47393980
     jc_user: johnny
     jc_home: /var/lib/johnny
-    # Johnny plays (and the display is on) between these local times
-    jc_on_time: "08:00"
-    jc_off_time: "22:00"
+    # Initial jc_reborn settings, only written when not set yet: after that,
+    # change them on the web page (http://<pi>/)
+    jc_default_settings:
+      nightMode: 1
+      nightStart: "22:00"
+      nightEnd: "08:00"
+      cec: 1
 
   tasks:
     - name: Install packages
@@ -20,7 +25,9 @@
         pkg:
           - build-essential
           - git
+          - libdrm-dev
           - libsdl2-dev
+          - pkgconf
           - unzip
           - v4l-utils
 
@@ -34,9 +41,10 @@
 
     - name: Clone jc_reborn repository
       git:
-        repo: 'https://github.com/jno6809/jc_reborn.git'
+        repo: "{{ jc_repo }}"
         dest: "{{ jc_dir }}"
         version: "{{ jc_version }}"
+      register: jc_git
       notify: Restart jc_reborn
 
     - name: Download Johnny Castaway resources
@@ -52,16 +60,37 @@
         remote_src: true
         creates: "{{ jc_dir }}/RESOURCE.MAP"
 
+    # The Makefile doesn't track header dependencies, so rebuild from scratch
+    - name: Clean previous jc_reborn build
+      community.general.make:
+        chdir: "{{ jc_dir }}"
+        file: "{{ jc_dir }}/Makefile.linux"
+        target: clean
+      when: jc_git.changed
+
     - name: Build jc_reborn
       community.general.make:
         chdir: "{{ jc_dir }}"
         file: "{{ jc_dir }}/Makefile.linux"
       notify: Restart jc_reborn
 
-    - name: Install jc_reborn service
+    - name: Create jc_reborn settings file
       copy:
-        src: jc_reborn.service
-        dest: /etc/systemd/system/jc_reborn.service
+        dest: "{{ jc_home }}/.jc_reborn"
+        content: ""
+        force: false
+        owner: "{{ jc_user }}"
+        group: "{{ jc_user }}"
+        mode: '0644'
+
+    - name: Set default jc_reborn settings
+      shell: |
+        grep -q '^{{ item.key }}=' {{ jc_home }}/.jc_reborn && exit 0
+        echo '{{ item.key }}={{ item.value }}' >> {{ jc_home }}/.jc_reborn
+        echo added
+      loop: "{{ jc_default_settings | dict2items }}"
+      register: jc_settings
+      changed_when: "'added' in jc_settings.stdout"
       notify: Restart jc_reborn
 
     # jc_reborn owns tty1, so no login prompt should start there
@@ -71,30 +100,33 @@
         enabled: false
         masked: true
 
-    - name: Install schedule script
-      template:
-        src: jc-schedule.sh.j2
-        dest: /usr/local/sbin/jc-schedule
-        mode: '0755'
+    # Night mode is built into jc_reborn now
+    - name: Stop the old day/night scheduler
+      command: systemctl disable --now jc-schedule.timer jc-schedule.service
+      args:
+        removes: /etc/systemd/system/jc-schedule.timer
 
-    - name: Install schedule service
-      copy:
-        src: jc-schedule.service
-        dest: /etc/systemd/system/jc-schedule.service
-
-    - name: Install schedule timer
-      template:
-        src: jc-schedule.timer.j2
-        dest: /etc/systemd/system/jc-schedule.timer
-
-    - name: Enable schedule
-      systemd:
-        name: "{{ item }}"
-        enabled: true
-        daemon_reload: true
+    - name: Remove the old day/night scheduler
+      file:
+        path: "{{ item }}"
+        state: absent
       loop:
-        - jc-schedule.service
-        - jc-schedule.timer
+        - /etc/systemd/system/jc-schedule.timer
+        - /etc/systemd/system/jc-schedule.service
+        - /usr/local/sbin/jc-schedule
+
+    - name: Install jc_reborn service
+      copy:
+        src: jc_reborn.service
+        dest: /etc/systemd/system/jc_reborn.service
+      notify: Restart jc_reborn
+
+    - name: Enable and start jc_reborn
+      systemd:
+        name: jc_reborn.service
+        enabled: true
+        state: started
+        daemon_reload: true
 
     # Speed up boot: nothing here needs to wait for the network
     - name: Disable waiting for network at boot
@@ -108,14 +140,9 @@
         dest: /etc/cloud/cloud-init.disabled
         content: ""
 
-    - name: Apply schedule now
-      systemd:
-        name: "{{ item }}"
-        state: started
-      loop:
-        - jc-schedule.timer
-        - jc-schedule.service
-
   handlers:
     - name: Restart jc_reborn
-      command: systemctl try-restart jc_reborn.service
+      systemd:
+        name: jc_reborn.service
+        state: restarted
+        daemon_reload: true

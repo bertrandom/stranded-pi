@@ -5,7 +5,9 @@ Description=Johnny Castaway (jc_reborn)
 User=johnny
 WorkingDirectory=/opt/jc_reborn
 Environment=SDL_VIDEODRIVER=kmsdrm
-ExecStart=/opt/jc_reborn/jc_reborn hotkeys
+ExecStart=/opt/jc_reborn/jc_reborn hotkeys web
+# Lets the web server listen on port 80 without running as root
+AmbientCapabilities=CAP_NET_BIND_SERVICE
 TTYPath=/dev/tty1
 TTYReset=yes
 TTYVHangup=yes
@@ -17,4 +19,5 @@ RestartSec=5
 # jc_reborn exits with 255 when it quits normally (Esc or SIGTERM)
 SuccessExitStatus=255
 
-# Started and stopped by jc-schedule, so no [Install] section
+[Install]
+WantedBy=multi-user.target

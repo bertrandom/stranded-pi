@@ -2,7 +2,7 @@
 
 Install Johnny Castaway on a Raspberry Pi using Ansible
 
-It builds [jc_reborn](https://github.com/jno6809/jc_reborn), an open source engine for the 1992 Johnny Castaway screen saver, and runs it full screen on the Pi's HDMI output during the day. At night it stops Johnny and turns the display off.
+It builds [a fork of jc_reborn](https://github.com/bertrandom/jc_reborn/tree/web-control), an open source engine for the 1992 Johnny Castaway screen saver, and runs it full screen on the Pi's HDMI output. The fork adds a web page for changing settings and controlling Johnny, and a night mode that turns the display off at night.
 
 ## Installation
 
@@ -26,15 +26,15 @@ To run it from another machine over SSH instead, use `-l pijohnny` (or add your 
 
 | What | Where |
 | --- | --- |
-| jc_reborn source and binary, pinned to a known commit | `/opt/jc_reborn` |
+| jc_reborn source and binary, built from the fork at a pinned commit | `/opt/jc_reborn` |
 | Original game data (`RESOURCE.MAP`, `RESOURCE.001`, sounds), checksum-verified | `/var/cache/johnny.zip`, extracted into `/opt/jc_reborn` |
 | `johnny` system user (groups `video`, `render`, `input`, `audio`) | home is `/var/lib/johnny` |
 | Service that runs Johnny | `/etc/systemd/system/jc_reborn.service` |
-| Day/night schedule | `/usr/local/sbin/jc-schedule`, `jc-schedule.service`, `jc-schedule.timer` |
+| jc_reborn settings and story progress | `/var/lib/johnny/.jc_reborn` |
 
 ### Running Johnny
 
-`jc_reborn.service` runs `jc_reborn hotkeys` as the unprivileged `johnny` user, drawing straight to the screen through SDL's KMS/DRM driver (no desktop or X needed). It takes over `/dev/tty1`, so the login prompt on tty1 is masked; the other consoles (Ctrl+Alt+F2 and up) and SSH still work normally.
+`jc_reborn.service` runs `jc_reborn hotkeys web` as the unprivileged `johnny` user, drawing straight to the screen through SDL's KMS/DRM driver (no desktop or X needed). It takes over `/dev/tty1`, so the login prompt on tty1 is masked; the other consoles (Ctrl+Alt+F2 and up) and SSH still work normally.
 
 If Johnny exits, whether it crashes or someone presses Esc on an attached keyboard, systemd restarts it after 5 seconds. Its output goes to the journal:
 
@@ -42,26 +42,33 @@ If Johnny exits, whether it crashes or someone presses Esc on an attached keyboa
 journalctl -u jc_reborn
 ```
 
-Johnny keeps its story progress (which day of the story it's on, plus the date for holiday scenes) in `/var/lib/johnny/.jc_reborn`.
+Johnny keeps its settings and story progress (which day of the story it's on, plus the date for holiday scenes) in `/var/lib/johnny/.jc_reborn`.
 
 With a keyboard attached, the hotkeys are: Esc to quit (and restart), Space to pause, Return to step a frame while paused, M to toggle max speed.
 
-### Day/night schedule
+### Web page
 
-`jc-schedule` checks the current local time:
+The `web` option starts a web server on port 80: open `http://<your Pi>/` (for example `http://pijohnny/`) to see whether Johnny is playing, pause him, step through frames, toggle max speed, change the day of the story, turn sound and hotkeys on or off, and set up night mode. Changes are saved right away.
 
-- **Between `jc_on_time` and `jc_off_time`** (08:00 to 22:00 by default): wakes the display and starts `jc_reborn.service`.
-- **Otherwise**: stops `jc_reborn.service`, blanks the console (which turns off the HDMI signal so the monitor sleeps), and, if the display is a TV that supports HDMI-CEC, puts it into standby.
-
-It runs at boot (`jc-schedule.service`) and at both switch times (`jc-schedule.timer`). Because it always sets the state from the current time, a reboot in the middle of the night stays dark.
-
-To change the hours, edit `jc_on_time` and `jc_off_time` in `main.yml` and run the playbook again.
-
-To override by hand, `sudo systemctl start jc_reborn` or `sudo systemctl stop jc_reborn`. The override lasts until the next switch time. To see when the next switch happens:
+Everything on the page is also available as an API, for example:
 
 ```
-systemctl list-timers jc-schedule.timer
+curl http://pijohnny/api/status
+curl -X POST http://pijohnny/api/toggle-pause
+curl -d nightStart=22:00 -d nightEnd=08:00 http://pijohnny/api/settings
 ```
+
+See the [fork's README](https://github.com/bertrandom/jc_reborn/tree/web-control#web-control-and-night-mode) for the full list. Normally only root can listen on port 80, so the service grants `johnny` just that one permission (`AmbientCapabilities=CAP_NET_BIND_SERVICE`).
+
+There's no password: anyone on your network can change settings or quit Johnny (systemd restarts it).
+
+### Night mode
+
+During the night hours Johnny pauses, the screen goes black and the Pi turns its HDMI output off, so the monitor sleeps. If the display is a TV that supports HDMI-CEC, it's put in standby too. In the morning the display comes back on and Johnny carries on where he left off.
+
+Night mode is on by default, from 22:00 to 08:00. Change the hours, or turn it off, on the web page. The page also has buttons to turn the display off or on right away; that lasts until the next scheduled switch.
+
+The defaults are set by `jc_default_settings` in `main.yml`. The playbook only writes a setting that isn't in `/var/lib/johnny/.jc_reborn` yet, so running it again never undoes changes made on the web page.
 
 ### Boot speed
 
