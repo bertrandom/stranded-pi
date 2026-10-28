@@ -1,41 +1,121 @@
 - name: Main
-  hosts: vms
+  hosts: pis
+  become: true
+  vars:
+    jc_dir: /opt/jc_reborn
+    jc_version: 524a5803e4fa65f840379c781f40ce39a927032e
+    jc_resources_url: https://test.bert.org/johnny.zip
+    jc_resources_checksum: sha256:4db347c0f57a4d92bad23234cc91034eeef5073d92a79e5ec1e0461f47393980
+    jc_user: johnny
+    jc_home: /var/lib/johnny
+    # Johnny plays (and the display is on) between these local times
+    jc_on_time: "08:00"
+    jc_off_time: "22:00"
+
   tasks:
     - name: Install packages
-      become: true
       apt:
         update_cache: true
         cache_valid_time: 3600
         pkg:
+          - build-essential
           - git
           - libsdl2-dev
+          - unzip
+          - v4l-utils
+
+    - name: Create user to run jc_reborn
+      user:
+        name: "{{ jc_user }}"
+        system: true
+        home: "{{ jc_home }}"
+        shell: /usr/sbin/nologin
+        groups: [video, render, input, audio]
 
     - name: Clone jc_reborn repository
       git:
         repo: 'https://github.com/jno6809/jc_reborn.git'
-        dest: "{{ ansible_facts['env']['HOME'] }}/jc_reborn"
-        accept_hostkey: true
+        dest: "{{ jc_dir }}"
+        version: "{{ jc_version }}"
+      notify: Restart jc_reborn
 
-    - name: Get Johnny Castaway resources
-      ansible.builtin.unarchive:
-        src: https://test.bert.org/johnny.zip
-        dest: "{{ ansible_facts['env']['HOME'] }}/jc_reborn"
-        remote_src: yes
+    - name: Download Johnny Castaway resources
+      get_url:
+        url: "{{ jc_resources_url }}"
+        dest: /var/cache/johnny.zip
+        checksum: "{{ jc_resources_checksum }}"
+
+    - name: Extract Johnny Castaway resources
+      unarchive:
+        src: /var/cache/johnny.zip
+        dest: "{{ jc_dir }}"
+        remote_src: true
+        creates: "{{ jc_dir }}/RESOURCE.MAP"
 
     - name: Build jc_reborn
       community.general.make:
-        chdir: "{{ ansible_facts['env']['HOME'] }}/jc_reborn"
-        file: "{{ ansible_facts['env']['HOME'] }}/jc_reborn/Makefile.linux"
+        chdir: "{{ jc_dir }}"
+        file: "{{ jc_dir }}/Makefile.linux"
+      notify: Restart jc_reborn
 
-    - name: Setup autologin for the user
-      ansible.builtin.command: sudo raspi-config nonint do_boot_behaviour B2
-      become: yes
-
-    - name: Creating a file with content
+    - name: Install jc_reborn service
       copy:
-        dest: "{{ ansible_facts['env']['HOME'] }}/.bash_profile"
-        content: |
-          if [ -z "$SSH_CONNECTION" ]; then
-            cd jc_reborn
-            exec ./jc_reborn hotkeys
-          fi
+        src: jc_reborn.service
+        dest: /etc/systemd/system/jc_reborn.service
+      notify: Restart jc_reborn
+
+    # jc_reborn owns tty1, so no login prompt should start there
+    - name: Disable login prompt on tty1
+      systemd:
+        name: getty@tty1.service
+        enabled: false
+        masked: true
+
+    - name: Install schedule script
+      template:
+        src: jc-schedule.sh.j2
+        dest: /usr/local/sbin/jc-schedule
+        mode: '0755'
+
+    - name: Install schedule service
+      copy:
+        src: jc-schedule.service
+        dest: /etc/systemd/system/jc-schedule.service
+
+    - name: Install schedule timer
+      template:
+        src: jc-schedule.timer.j2
+        dest: /etc/systemd/system/jc-schedule.timer
+
+    - name: Enable schedule
+      systemd:
+        name: "{{ item }}"
+        enabled: true
+        daemon_reload: true
+      loop:
+        - jc-schedule.service
+        - jc-schedule.timer
+
+    # Speed up boot: nothing here needs to wait for the network
+    - name: Disable waiting for network at boot
+      systemd:
+        name: NetworkManager-wait-online.service
+        enabled: false
+
+    # cloud-init only matters for the first boot of an rpi-imager image
+    - name: Disable cloud-init
+      copy:
+        dest: /etc/cloud/cloud-init.disabled
+        content: ""
+
+    - name: Apply schedule now
+      systemd:
+        name: "{{ item }}"
+        state: started
+      loop:
+        - jc-schedule.timer
+        - jc-schedule.service
+
+  handlers:
+    - name: Restart jc_reborn
+      command: systemctl try-restart jc_reborn.service

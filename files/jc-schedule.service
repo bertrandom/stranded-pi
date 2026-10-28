@@ -1,0 +1,9 @@
+[Unit]
+Description=Apply Johnny Castaway day/night schedule
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/jc-schedule
+
+[Install]
+WantedBy=multi-user.target

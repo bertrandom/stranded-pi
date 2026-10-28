@@ -1,0 +1,20 @@
+[Unit]
+Description=Johnny Castaway (jc_reborn)
+
+[Service]
+User=johnny
+WorkingDirectory=/opt/jc_reborn
+Environment=SDL_VIDEODRIVER=kmsdrm
+ExecStart=/opt/jc_reborn/jc_reborn hotkeys
+TTYPath=/dev/tty1
+TTYReset=yes
+TTYVHangup=yes
+StandardInput=tty-force
+StandardOutput=journal
+StandardError=journal
+Restart=always
+RestartSec=5
+# jc_reborn exits with 255 when it quits normally (Esc or SIGTERM)
+SuccessExitStatus=255
+
+# Started and stopped by jc-schedule, so no [Install] section

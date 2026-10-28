@@ -1,0 +1,16 @@
+#!/bin/bash
+# Turns Johnny Castaway on during the day and off (with the display) at night.
+# Run by jc-schedule.timer at the switch times and by jc-schedule.service at boot.
+ON={{ jc_on_time | replace(':', '') }}
+OFF={{ jc_off_time | replace(':', '') }}
+
+now=$((10#$(date +%H%M)))
+if (( now >= 10#$ON && now < 10#$OFF )); then
+  cec-ctl -d /dev/cec0 --playback --to 0 --image-view-on >/dev/null 2>&1 || true
+  setterm --term linux --blank poke </dev/tty1 >/dev/tty1
+  systemctl --no-block start jc_reborn.service
+else
+  systemctl stop jc_reborn.service
+  setterm --term linux --blank force </dev/tty1 >/dev/tty1
+  cec-ctl -d /dev/cec0 --playback --to 0 --standby >/dev/null 2>&1 || true
+fi
