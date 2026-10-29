@@ -20,6 +20,37 @@ ansible-playbook -i inventory.yml main.yml -l local --ask-become-pass
 
 To run it from another machine over SSH instead, use `-l pijohnny` (or add your own host to `inventory.yml`).
 
+## SD card image
+
+Instead of running the playbook on a Pi, you can build an SD card image with everything already installed, and flash it with [Raspberry Pi Imager](https://www.raspberrypi.com/software/). Imager still lets you set the username, password, Wi-Fi, SSH and so on while flashing, as it does for Raspberry Pi OS.
+
+### Building it
+
+On a Mac with Apple Silicon (or any machine with Docker):
+
+```
+./image/build-docker.sh
+```
+
+On arm64 Linux, `sudo ./image/build.sh` does the same without Docker. It takes the official Raspberry Pi OS Lite (64-bit) Trixie image, grows it, runs `main.yml` inside it (with `jc_image_build=true`), and writes to `image/out`:
+
+- `<date>-johnny-castaway-raspios-trixie-arm64-lite.img.xz`, the image, with its `.sha256`
+- `os_list.json`, a Raspberry Pi Imager repository listing the image
+
+By default `os_list.json` points at the image on your disk. To publish the image somewhere, set `IMAGE_URL_BASE` to the URL of the folder you'll upload it to, eg. `IMAGE_URL_BASE=https://example.com/johnny ./image/build-docker.sh`, and upload both files there.
+
+### Flashing it
+
+Imager only offers its settings step for images listed in a repository, not for an image picked with "Use custom". So point Imager at `os_list.json`:
+
+1. In Raspberry Pi Imager, open **App Options**, set **Content Repository** to **Use custom file** and choose `os_list.json` (or a URL to it). On a Mac you can also start it with `open -a "Raspberry Pi Imager" --args --repo /path/to/os_list.json`.
+2. Choose your Raspberry Pi model (Zero 2 W, 3, 4 or 5), then **Johnny Castaway** as the operating system, and your SD card.
+3. Fill in the customisation settings: hostname, username and password, Wi-Fi, SSH. Then write the card.
+
+On first boot the Pi applies those settings, expands the filesystem to fill the card, and starts Johnny. The web page is at `http://<hostname>/`.
+
+Unlike a Pi set up with the playbook, an image keeps cloud-init enabled, since it's what applies Imager's settings, so it boots a few seconds slower. Running the playbook on the Pi afterwards disables it.
+
 ## How it works
 
 ### What the playbook installs
@@ -34,7 +65,7 @@ To run it from another machine over SSH instead, use `-l pijohnny` (or add your 
 
 ### Running Johnny
 
-`jc_reborn.service` runs `jc_reborn hotkeys web` as the unprivileged `johnny` user, drawing straight to the screen through SDL's KMS/DRM driver (no desktop or X needed). It takes over `/dev/tty1`, so the login prompt on tty1 is masked; the other consoles (Ctrl+Alt+F2 and up) and SSH still work normally.
+`jc_reborn.service` runs `jc_reborn hotkeys web` as the unprivileged `johnny` user, drawing straight to the screen through SDL's KMS/DRM driver (no desktop or X needed). It takes over `/dev/tty1`, so `getty@tty1.service` (the login prompt on tty1) has an override that skips it while Johnny is installed; the other consoles (Ctrl+Alt+F2 and up) and SSH still work normally.
 
 If Johnny exits, whether it crashes or someone presses Esc on an attached keyboard, systemd restarts it after 5 seconds. Its output goes to the journal:
 

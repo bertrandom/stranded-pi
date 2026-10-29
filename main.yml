@@ -16,6 +16,10 @@
       nightStart: "22:00"
       nightEnd: "08:00"
       cec: 1
+    # Set by image/build.sh when installing into a Raspberry Pi OS image
+    # instead of a running Pi: nothing can be started, and cloud-init must
+    # stay enabled for Raspberry Pi Imager's settings to apply on first boot
+    jc_image_build: false
 
   tasks:
     - name: Install packages
@@ -93,12 +97,25 @@
       changed_when: "'added' in jc_settings.stdout"
       notify: Restart jc_reborn
 
-    # jc_reborn owns tty1, so no login prompt should start there
-    - name: Disable login prompt on tty1
+    # jc_reborn owns tty1, so no login prompt should start there. Not by
+    # masking getty@tty1: Raspberry Pi OS's first boot user setup (userconf)
+    # enables and starts it, and fails if it's masked
+    - name: Unmask login prompt on tty1
       systemd:
         name: getty@tty1.service
-        enabled: false
-        masked: true
+        masked: false
+
+    - name: Create getty@tty1 override directory
+      file:
+        path: /etc/systemd/system/getty@tty1.service.d
+        state: directory
+
+    - name: Skip login prompt on tty1 while jc_reborn is installed
+      copy:
+        dest: /etc/systemd/system/getty@tty1.service.d/jc_reborn.conf
+        content: |
+          [Unit]
+          ConditionPathExists=!/etc/systemd/system/jc_reborn.service
 
     # Night mode is built into jc_reborn now
     - name: Stop the old day/night scheduler
@@ -125,8 +142,8 @@
       systemd:
         name: jc_reborn.service
         enabled: true
-        state: started
-        daemon_reload: true
+        state: "{{ omit if jc_image_build else 'started' }}"
+        daemon_reload: "{{ not jc_image_build }}"
 
     # Speed up boot: nothing here needs to wait for the network
     - name: Disable waiting for network at boot
@@ -139,6 +156,7 @@
       copy:
         dest: /etc/cloud/cloud-init.disabled
         content: ""
+      when: not jc_image_build
 
   handlers:
     - name: Restart jc_reborn
@@ -146,3 +164,4 @@
         name: jc_reborn.service
         state: restarted
         daemon_reload: true
+      when: not jc_image_build
