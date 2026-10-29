@@ -79,7 +79,7 @@ With a keyboard attached, the hotkeys are: Esc to quit (and restart), Space to p
 
 ### Web page
 
-Open `http://<your Pi>/` to see a live preview of the screen and which scene is playing, pause Johnny, step through frames, skip to the next scene, toggle max speed, change the day of the story, turn sound and hotkeys on or off, set up night mode, and restart Johnny or reboot or shut down the Pi. Changes are saved right away.
+Open `http://<your Pi>/` to see a live preview of the screen and which scene is playing, pause Johnny, step through frames, skip to the next scene, toggle max speed, change the day of the story, turn sound and hotkeys on or off, set up night mode, update stranded to its latest release, and restart Johnny or reboot or shut down the Pi. Changes are saved right away.
 
 Everything on the page is also available as an API, for example:
 
@@ -91,7 +91,7 @@ curl -H 'Content-Type: application/json' -d '{"nightStart": "22:00", "nightEnd":
 
 `curl http://<your Pi>/api` lists every endpoint and setting, and [stranded's README](https://github.com/bertrandom/stranded#web-control-and-night-mode) describes them.
 
-There's no password: anyone on your network can change settings, restart Johnny, or reboot and shut down the Pi. After a shutdown, the Pi stays off until it's unplugged and plugged back in.
+There's no password: anyone on your network can change settings, update or restart Johnny, or reboot and shut down the Pi. After a shutdown, the Pi stays off until it's unplugged and plugged back in.
 
 ### Night mode
 
