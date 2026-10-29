@@ -61,6 +61,7 @@ Unlike a Pi set up with the playbook, an image keeps cloud-init enabled, since i
 | Original game data (`RESOURCE.MAP`, `RESOURCE.001`, sounds), checksum-verified | `/var/cache/johnny.zip`, extracted into `/opt/jc_reborn` |
 | `johnny` system user (groups `video`, `render`, `input`, `audio`) | home is `/var/lib/johnny` |
 | Service that runs Johnny | `/etc/systemd/system/jc_reborn.service` |
+| polkit rule that lets `johnny` reboot and shut down the Pi, for the web page | `/etc/polkit-1/rules.d/50-jc_reborn.rules` |
 | jc_reborn settings and story progress | `/var/lib/johnny/.jc_reborn` |
 
 ### Running Johnny
@@ -86,12 +87,14 @@ Everything on the page is also available as an API, for example:
 ```
 curl http://pijohnny/api/status
 curl -X POST http://pijohnny/api/toggle-pause
-curl -d nightStart=22:00 -d nightEnd=08:00 http://pijohnny/api/settings
+curl -H 'Content-Type: application/json' -d '{"nightStart": "22:00", "nightEnd": "08:00"}' http://pijohnny/api/settings
 ```
 
-See the [fork's README](https://github.com/bertrandom/jc_reborn#web-control-and-night-mode) for the full list. Normally only root can listen on port 80, so the service grants `johnny` just that one permission (`AmbientCapabilities=CAP_NET_BIND_SERVICE`).
+`curl http://pijohnny/api` lists every endpoint and setting, and the [fork's README](https://github.com/bertrandom/jc_reborn#web-control-and-night-mode) describes them. Normally only root can listen on port 80, so the service grants `johnny` just that one permission (`AmbientCapabilities=CAP_NET_BIND_SERVICE`).
 
-There's no password: anyone on your network can change settings or quit Johnny (systemd restarts it).
+The System section at the bottom of the page restarts Johnny, or reboots or shuts down the Pi. jc_reborn runs `systemctl reboot` or `systemctl poweroff`, which a polkit rule installed by the playbook allows `johnny` to do, and nothing else. After a shutdown, the Pi stays off until it's unplugged and plugged back in.
+
+There's no password: anyone on your network can change settings, restart Johnny, or reboot and shut down the Pi.
 
 ### Night mode
 

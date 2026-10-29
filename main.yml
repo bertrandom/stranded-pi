@@ -4,7 +4,7 @@
   vars:
     jc_dir: /opt/jc_reborn
     jc_repo: https://github.com/bertrandom/jc_reborn.git
-    jc_version: e47f861c164177a6df0d07e932c4f6d0fd1f9f59
+    jc_version: 2f6836fe73f41ed335b7cb48815d0450b738544d
     jc_resources_url: https://test.bert.org/johnny.zip
     jc_resources_checksum: sha256:4db347c0f57a4d92bad23234cc91034eeef5073d92a79e5ec1e0461f47393980
     jc_user: johnny
@@ -32,6 +32,7 @@
           - libdrm-dev
           - libsdl2-dev
           - pkgconf
+          - polkitd
           - unzip
           - v4l-utils
 
@@ -116,6 +117,25 @@
         content: |
           [Unit]
           ConditionPathExists=!/etc/systemd/system/jc_reborn.service
+
+    # For the Reboot and Shut down buttons on the web page: jc_reborn runs
+    # systemctl reboot or poweroff, which polkit only allows johnny to run
+    # with this rule
+    - name: Allow jc_reborn to reboot and shut down
+      copy:
+        dest: /etc/polkit-1/rules.d/50-jc_reborn.rules
+        mode: '0644'
+        content: |
+          // Lets jc_reborn's web page reboot or shut down the computer
+          polkit.addRule(function(action, subject) {
+              if (subject.user == "{{ jc_user }}" &&
+                  (action.id == "org.freedesktop.login1.reboot" ||
+                   action.id == "org.freedesktop.login1.reboot-multiple-sessions" ||
+                   action.id == "org.freedesktop.login1.power-off" ||
+                   action.id == "org.freedesktop.login1.power-off-multiple-sessions")) {
+                  return polkit.Result.YES;
+              }
+          });
 
     - name: Install jc_reborn service
       copy:
