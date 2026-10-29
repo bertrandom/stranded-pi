@@ -1,28 +1,14 @@
-# rpi-jc-ansible
+# stranded-pi
 
-Install Johnny Castaway on a Raspberry Pi using Ansible
+Turn a Raspberry Pi into a Johnny Castaway screen: the 1992 screen saver, playing full screen on the Pi's HDMI output, with a web page to control it and a night mode that turns the display off at night.
 
-It builds [a fork of jc_reborn](https://github.com/bertrandom/jc_reborn), an open source engine for the 1992 Johnny Castaway screen saver, and runs it full screen on the Pi's HDMI output. The fork adds a web page for changing settings and controlling Johnny, and a night mode that turns the display off at night.
+It runs [stranded](https://github.com/bertrandom/stranded), an open source engine for the screen saver (a fork of [Johnny Reborn](https://github.com/jno6809/jc_reborn)), installed as a Debian package. This repository builds a ready-to-flash SD card image with it, and has a script to set it up on a Pi that's already running Raspberry Pi OS.
 
-## Installation
-
-On Raspberry Pi:
-```
-sudo apt install ansible git
-git clone https://github.com/bertrandom/rpi-jc-ansible.git
-cd rpi-jc-ansible
-```
-
-Then run:
-```
-ansible-playbook -i inventory.yml main.yml -l local --ask-become-pass
-```
-
-To run it from another machine over SSH instead, use `-l pijohnny` (or add your own host to `inventory.yml`).
+Works on the Raspberry Pi Zero 2 W, 3, 4 and 5, with Raspberry Pi OS Lite (64-bit) Trixie.
 
 ## SD card image
 
-Instead of running the playbook on a Pi, you can build an SD card image with everything already installed, and flash it with [Raspberry Pi Imager](https://www.raspberrypi.com/software/). Imager still lets you set the username, password, Wi-Fi, SSH and so on while flashing, as it does for Raspberry Pi OS.
+The image is the official Raspberry Pi OS Lite (64-bit) with stranded preinstalled. [Raspberry Pi Imager](https://www.raspberrypi.com/software/) still lets you set the hostname, username and password, Wi-Fi, SSH and so on while flashing, as for Raspberry Pi OS.
 
 ### Building it
 
@@ -32,69 +18,80 @@ On a Mac with Apple Silicon (or any machine with Docker):
 ./image/build-docker.sh
 ```
 
-On arm64 Linux, `sudo ./image/build.sh` does the same without Docker. It takes the official Raspberry Pi OS Lite (64-bit) Trixie image, grows it, runs `main.yml` inside it (with `jc_image_build=true`), and writes to `image/out`:
+On arm64 Linux, `sudo ./image/build.sh` does the same without Docker. It takes the official image, grows it a little, runs `setup.sh` inside it, and writes to `image/out`:
 
-- `<date>-johnny-castaway-raspios-trixie-arm64-lite.img.xz`, the image, with its `.sha256`
+- `stranded-<version>-raspios-trixie-arm64-lite.img.xz`, the image, with its `.sha256`
 - `repo.json`, a Raspberry Pi Imager repository listing the image
 
-By default `repo.json` points at the image on your disk. To publish the image somewhere, set `IMAGE_URL_BASE` to the URL of the folder you'll upload it to, eg. `IMAGE_URL_BASE=https://example.com/johnny ./image/build-docker.sh`, and upload both files there.
+It installs the latest [stranded release](https://github.com/bertrandom/stranded/releases). To pick another one, set `STRANDED_VERSION`, eg. `STRANDED_VERSION=2026.10.29 ./image/build-docker.sh`, or `STRANDED_DEB` to a `.deb` file in this directory.
+
+By default `repo.json` points at the image on your disk. To publish the image somewhere, set `IMAGE_URL_BASE` to the URL of the folder you'll upload it to, eg. `IMAGE_URL_BASE=https://example.com/stranded ./image/build-docker.sh`, and upload both files there. Keep in mind that the image includes the original game's data files.
 
 ### Flashing it
 
 Imager only offers its settings step for images listed in a repository, not for an image picked with "Use custom". So point Imager at `repo.json`:
 
 1. In Raspberry Pi Imager, open **App Options**, set **Content Repository** to **Use custom file** and choose `repo.json` (or a URL to it). On a Mac you can also start it with `open -a "Raspberry Pi Imager" --args --repo /path/to/repo.json`.
-2. Choose your Raspberry Pi model (Zero 2 W, 3, 4 or 5), then **Johnny Castaway** as the operating system, and your SD card.
+2. Choose your Raspberry Pi model, then **Stranded** as the operating system, and your SD card.
 3. Fill in the customisation settings: hostname, username and password, Wi-Fi, SSH. Then write the card.
 
 On first boot the Pi applies those settings, expands the filesystem to fill the card, and starts Johnny. The web page is at `http://<hostname>/`.
 
-Unlike a Pi set up with the playbook, an image keeps cloud-init enabled, since it's what applies Imager's settings, so it boots a few seconds slower. Running the playbook on the Pi afterwards disables it.
+The image keeps cloud-init enabled, since it's what applies Imager's settings, so it boots a few seconds slower. Running `setup.sh` on the Pi afterwards disables it.
+
+## Setting up a running Pi
+
+On a Pi running Raspberry Pi OS Lite (64-bit) Trixie, copy `setup.sh` to it and run it as root, eg. from this directory:
+
+```
+scp setup.sh <your Pi>:
+ssh <your Pi> sudo ./setup.sh
+```
+
+It installs the latest stranded release, downloads the game's data files, writes the default settings, and starts Johnny. Run it again to update to the latest release; it keeps the settings. `STRANDED_VERSION` and `STRANDED_DEB` work as for the image.
 
 ## How it works
 
-### What the playbook installs
+### What gets installed
+
+The [stranded package](https://github.com/bertrandom/stranded#debian-package) installs the program, a `stranded` system user, and a `stranded.service` that runs it on the Pi's screen. `setup.sh` adds:
 
 | What | Where |
 | --- | --- |
-| jc_reborn source and binary, built from the fork at a pinned commit | `/opt/jc_reborn` |
-| Original game data (`RESOURCE.MAP`, `RESOURCE.001`, sounds), checksum-verified | `/var/cache/johnny.zip`, extracted into `/opt/jc_reborn` |
-| `johnny` system user (groups `video`, `render`, `input`, `audio`) | home is `/var/lib/johnny` |
-| Service that runs Johnny | `/etc/systemd/system/jc_reborn.service` |
-| polkit rule that lets `johnny` reboot and shut down the Pi, for the web page | `/etc/polkit-1/rules.d/50-jc_reborn.rules` |
-| jc_reborn settings and story progress | `/var/lib/johnny/.jc_reborn` |
+| The original game's data files (`RESOURCE.MAP`, `RESOURCE.001`, sounds), checksum-verified, from `RESOURCES_URL` | `/var/lib/stranded` |
+| Default settings: night mode on, from 22:00 to 08:00, with HDMI-CEC | `/var/lib/stranded/.stranded` |
+| No waiting for the network at boot | `NetworkManager-wait-online.service` disabled |
+| On a running Pi, cloud-init disabled | `/etc/cloud/cloud-init.disabled` |
+
+Settings are only written when they aren't set yet, so running `setup.sh` again never undoes changes made on the web page.
 
 ### Running Johnny
 
-`jc_reborn.service` runs `jc_reborn hotkeys web` as the unprivileged `johnny` user, drawing straight to the screen through SDL's KMS/DRM driver (no desktop or X needed). It takes over `/dev/tty1`, so `getty@tty1.service` (the login prompt on tty1) has an override that skips it while Johnny is installed; the other consoles (Ctrl+Alt+F2 and up) and SSH still work normally.
+`stranded.service` runs `stranded hotkeys web` as the unprivileged `stranded` user, drawing straight to the screen through SDL's KMS/DRM driver (no desktop or X needed). It takes over `/dev/tty1`, so the login prompt there is turned off while the service is enabled; the other consoles (Ctrl+Alt+F2 and up) and SSH still work normally.
 
 If Johnny exits, whether it crashes or someone presses Esc on an attached keyboard, systemd restarts it after 5 seconds. Its output goes to the journal:
 
 ```
-journalctl -u jc_reborn
+journalctl -u stranded
 ```
 
-Johnny keeps its settings and story progress (which day of the story it's on, plus the date for holiday scenes) in `/var/lib/johnny/.jc_reborn`.
-
-With a keyboard attached, the hotkeys are: Esc to quit (and restart), Space to pause, Return to step a frame while paused, M to toggle max speed.
+With a keyboard attached, the hotkeys are: Esc to quit (and restart), Space to pause, Return to step a frame while paused, N for the next scene, M to toggle max speed.
 
 ### Web page
 
-The `web` option starts a web server on port 80: open `http://<your Pi>/` (for example `http://pijohnny/`) to see a live preview of the screen and which scene is playing, pause Johnny, step through frames, skip to the next scene, toggle max speed, change the day of the story, turn sound and hotkeys on or off, and set up night mode. Changes are saved right away.
+Open `http://<your Pi>/` to see a live preview of the screen and which scene is playing, pause Johnny, step through frames, skip to the next scene, toggle max speed, change the day of the story, turn sound and hotkeys on or off, set up night mode, and restart Johnny or reboot or shut down the Pi. Changes are saved right away.
 
 Everything on the page is also available as an API, for example:
 
 ```
-curl http://pijohnny/api/status
-curl -X POST http://pijohnny/api/toggle-pause
-curl -H 'Content-Type: application/json' -d '{"nightStart": "22:00", "nightEnd": "08:00"}' http://pijohnny/api/settings
+curl http://<your Pi>/api/status
+curl -X POST http://<your Pi>/api/toggle-pause
+curl -H 'Content-Type: application/json' -d '{"nightStart": "22:00", "nightEnd": "08:00"}' http://<your Pi>/api/settings
 ```
 
-`curl http://pijohnny/api` lists every endpoint and setting, and the [fork's README](https://github.com/bertrandom/jc_reborn#web-control-and-night-mode) describes them. Normally only root can listen on port 80, so the service grants `johnny` just that one permission (`AmbientCapabilities=CAP_NET_BIND_SERVICE`).
+`curl http://<your Pi>/api` lists every endpoint and setting, and [stranded's README](https://github.com/bertrandom/stranded#web-control-and-night-mode) describes them.
 
-The System section at the bottom of the page restarts Johnny, or reboots or shuts down the Pi. jc_reborn runs `systemctl reboot` or `systemctl poweroff`, which a polkit rule installed by the playbook allows `johnny` to do, and nothing else. After a shutdown, the Pi stays off until it's unplugged and plugged back in.
-
-There's no password: anyone on your network can change settings, restart Johnny, or reboot and shut down the Pi.
+There's no password: anyone on your network can change settings, restart Johnny, or reboot and shut down the Pi. After a shutdown, the Pi stays off until it's unplugged and plugged back in.
 
 ### Night mode
 
@@ -102,12 +99,6 @@ During the night hours Johnny pauses, the screen goes black and the Pi turns its
 
 Night mode is on by default, from 22:00 to 08:00. Change the hours, or turn it off, on the web page. The page also has buttons to turn the display off or on right away; that lasts until the next scheduled switch.
 
-The defaults are set by `jc_default_settings` in `main.yml`. The playbook only writes a setting that isn't in `/var/lib/johnny/.jc_reborn` yet, so running it again never undoes changes made on the web page.
+### Widescreen displays
 
-### Boot speed
-
-Nothing here needs the network, so the playbook disables `NetworkManager-wait-online.service`, and disables cloud-init (`/etc/cloud/cloud-init.disabled`), which is only needed on the first boot of an image made with Raspberry Pi Imager.
-
-## Notes
-
-Tested on a Raspberry Pi 3 Model B Rev 1.2 running Raspberry Pi OS Lite 64-bit Trixie
+On a 16:9 (or any wider than 4:3) display, the picture isn't stretched: the ocean and sky are extended to the sides of the screen.

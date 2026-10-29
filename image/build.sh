@@ -1,7 +1,8 @@
 #!/bin/bash
-# Builds a Raspberry Pi OS Lite image with Johnny Castaway preinstalled, by
-# running main.yml inside the official image. Raspberry Pi Imager can then
-# flash it and apply its usual settings (user, Wi-Fi, SSH) on first boot.
+# Builds a Raspberry Pi OS Lite image with stranded (Johnny Castaway)
+# preinstalled, by running setup.sh inside the official image. Raspberry Pi
+# Imager can then flash it and apply its usual settings (user, Wi-Fi, SSH)
+# on first boot.
 #
 # Runs as root on arm64 Linux. From a Mac (or anywhere with Docker), use
 # image/build-docker.sh instead.
@@ -14,8 +15,12 @@ set -euo pipefail
 
 # Official Raspberry Pi OS Lite (64-bit) image to build on
 BASE_URL=${BASE_URL:-https://downloads.raspberrypi.com/raspios_lite_arm64/images/raspios_lite_arm64-2026-10-06/2026-10-06-raspios-trixie-arm64-lite.img.xz}
-# Room added to the root filesystem for jc_reborn and its build dependencies
-EXTRA_SPACE=${EXTRA_SPACE:-1536M}
+# Room added to the root filesystem for stranded and its dependencies
+EXTRA_SPACE=${EXTRA_SPACE:-512M}
+# A stranded .deb to install, relative to the repository (or absolute).
+# Default: the latest release, or STRANDED_VERSION's
+STRANDED_DEB=${STRANDED_DEB:-}
+STRANDED_VERSION=${STRANDED_VERSION:-}
 # Where the image will be downloaded from, for repo.json. Defaults to the
 # local file, for testing
 IMAGE_URL_BASE=${IMAGE_URL_BASE:-}
@@ -27,8 +32,7 @@ WORK=$REPO_DIR/image/work
 OUT=$REPO_DIR/image/out
 MNT=$WORK/mnt
 DATE=$(date +%Y-%m-%d)
-NAME=$DATE-johnny-castaway-raspios-trixie-arm64-lite
-IMG=$WORK/$NAME.img
+IMG=$WORK/stranded.img
 
 ROOT_DEV=
 BOOT_DEV=
@@ -53,7 +57,7 @@ fi
 log "Installing build tools"
 apt-get update -qq
 DEBIAN_FRONTEND=noninteractive apt-get install -y -qq --no-install-recommends \
-    ansible ca-certificates curl e2fsprogs fdisk python3 xz-utils zerofree >/dev/null
+    ca-certificates curl e2fsprogs fdisk python3 xz-utils zerofree >/dev/null
 
 mkdir -p "$WORK" "$OUT" "$MNT"
 
@@ -99,17 +103,24 @@ printf '#!/bin/sh\nexit 101\n' > "$MNT/usr/sbin/policy-rc.d"
 chmod +x "$MNT/usr/sbin/policy-rc.d"
 ls "$MNT"/etc/ssh/ssh_host_* > "$WORK/ssh-keys-before" 2>/dev/null || true
 
-log "Running the playbook in the image"
-cat > "$WORK/inventory.ini" <<EOF
-[pis]
-image ansible_connection=community.general.chroot ansible_host=$MNT ansible_python_interpreter=/usr/bin/python3
-EOF
-ANSIBLE_HOST_KEY_CHECKING=False ansible-playbook -i "$WORK/inventory.ini" \
-    -e jc_image_build=true "$REPO_DIR/main.yml"
+log "Running setup.sh in the image"
+cp "$REPO_DIR/setup.sh" "$MNT/tmp/setup.sh"
+deb_in_image=
+if [ -n "$STRANDED_DEB" ]; then
+    case "$STRANDED_DEB" in /*) deb=$STRANDED_DEB ;; *) deb=$REPO_DIR/$STRANDED_DEB ;; esac
+    cp "$deb" "$MNT/tmp/"
+    deb_in_image=/tmp/$(basename "$deb")
+fi
+chroot "$MNT" env IMAGE_BUILD=1 STRANDED_DEB="$deb_in_image" \
+    STRANDED_VERSION="$STRANDED_VERSION" bash /tmp/setup.sh
+
+# Named after the version of stranded in it
+VERSION=$(chroot "$MNT" dpkg-query -W -f '${Version}' stranded)
+NAME=stranded-$VERSION-raspios-trixie-arm64-lite
 
 log "Cleaning up the image"
 chroot "$MNT" apt-get clean
-rm -rf "$MNT"/var/lib/apt/lists/* "$MNT/root/.ansible" "$MNT"/tmp/* "$MNT"/var/tmp/*
+rm -rf "$MNT"/var/lib/apt/lists/* "$MNT"/tmp/* "$MNT"/var/tmp/*
 rm -f "$MNT/usr/sbin/policy-rc.d"
 rm -f "$MNT/etc/resolv.conf"
 mv "$WORK/resolv.conf.orig" "$MNT/etc/resolv.conf"
@@ -154,8 +165,8 @@ os_list = {
     # The device list, so that Imager can ask which Raspberry Pi it is for
     "imager": official["imager"],
     "os_list": [{
-        "name": "Johnny Castaway",
-        "description": "Raspberry Pi OS Lite (64-bit) running the Johnny Castaway screensaver",
+        "name": "Stranded",
+        "description": "Raspberry Pi OS Lite (64-bit) playing the Johnny Castaway screensaver full screen",
         "icon": "https://downloads.raspberrypi.com/raspios_armhf/Raspberry_Pi_OS_(32-bit).png",
         "url": e["URL"],
         "release_date": e["DATE"],

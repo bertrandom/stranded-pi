@@ -8,6 +8,6 @@ REPO_DIR=$(cd "$(dirname "$0")/.." && pwd)
 
 exec docker run --rm --privileged --platform linux/arm64 \
     -v "$REPO_DIR:/work" \
-    -e BASE_URL -e EXTRA_SPACE -e IMAGE_URL_BASE \
+    -e BASE_URL -e EXTRA_SPACE -e IMAGE_URL_BASE -e STRANDED_DEB -e STRANDED_VERSION \
     -e HOST_OUT_DIR="$REPO_DIR/image/out" \
     debian:trixie /work/image/build.sh
