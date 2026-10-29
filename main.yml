@@ -4,7 +4,7 @@
   vars:
     jc_dir: /opt/jc_reborn
     jc_repo: https://github.com/bertrandom/jc_reborn.git
-    jc_version: eeda766e17249893cc80fdf02a891ca790b96b59
+    jc_version: d453106b448966b42ddb10bd428b7713a78ed4c3
     jc_resources_url: https://test.bert.org/johnny.zip
     jc_resources_checksum: sha256:4db347c0f57a4d92bad23234cc91034eeef5073d92a79e5ec1e0461f47393980
     jc_user: johnny
@@ -116,21 +116,6 @@
         content: |
           [Unit]
           ConditionPathExists=!/etc/systemd/system/jc_reborn.service
-
-    # Night mode is built into jc_reborn now
-    - name: Stop the old day/night scheduler
-      command: systemctl disable --now jc-schedule.timer jc-schedule.service
-      args:
-        removes: /etc/systemd/system/jc-schedule.timer
-
-    - name: Remove the old day/night scheduler
-      file:
-        path: "{{ item }}"
-        state: absent
-      loop:
-        - /etc/systemd/system/jc-schedule.timer
-        - /etc/systemd/system/jc-schedule.service
-        - /usr/local/sbin/jc-schedule
 
     - name: Install jc_reborn service
       copy:

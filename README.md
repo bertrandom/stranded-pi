@@ -79,7 +79,7 @@ With a keyboard attached, the hotkeys are: Esc to quit (and restart), Space to p
 
 ### Web page
 
-The `web` option starts a web server on port 80: open `http://<your Pi>/` (for example `http://pijohnny/`) to see whether Johnny is playing, pause him, step through frames, toggle max speed, change the day of the story, turn sound and hotkeys on or off, and set up night mode. Changes are saved right away.
+The `web` option starts a web server on port 80: open `http://<your Pi>/` (for example `http://pijohnny/`) to see a live preview of the screen and which scene is playing, pause Johnny, step through frames, skip to the next scene, toggle max speed, change the day of the story, turn sound and hotkeys on or off, and set up night mode. Changes are saved right away.
 
 Everything on the page is also available as an API, for example:
 
