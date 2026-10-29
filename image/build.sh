@@ -9,14 +9,14 @@
 # Writes to image/out:
 #   <name>.img.xz          the image
 #   <name>.img.xz.sha256   its checksum
-#   os_list.json           a Raspberry Pi Imager repository listing the image
+#   repo.json              a Raspberry Pi Imager repository listing the image
 set -euo pipefail
 
 # Official Raspberry Pi OS Lite (64-bit) image to build on
 BASE_URL=${BASE_URL:-https://downloads.raspberrypi.com/raspios_lite_arm64/images/raspios_lite_arm64-2026-10-06/2026-10-06-raspios-trixie-arm64-lite.img.xz}
 # Room added to the root filesystem for jc_reborn and its build dependencies
 EXTRA_SPACE=${EXTRA_SPACE:-1536M}
-# Where the image will be downloaded from, for os_list.json. Defaults to the
+# Where the image will be downloaded from, for repo.json. Defaults to the
 # local file, for testing
 IMAGE_URL_BASE=${IMAGE_URL_BASE:-}
 # image/out as seen from outside Docker, for the default file:// URL
@@ -137,7 +137,7 @@ download_size=$(stat -c %s "$OUT/$NAME.img.xz")
 download_sha256=$(sha256sum "$OUT/$NAME.img.xz" | cut -d' ' -f1)
 echo "$download_sha256  $NAME.img.xz" > "$OUT/$NAME.img.xz.sha256"
 
-log "Writing os_list.json"
+log "Writing repo.json"
 if [ -n "$IMAGE_URL_BASE" ]; then
     url=${IMAGE_URL_BASE%/}/$NAME.img.xz
 else
@@ -170,7 +170,7 @@ os_list = {
     }],
 }
 json.dump(os_list, sys.stdout, indent=2)
-' > "$OUT/os_list.json"
+' > "$OUT/repo.json"
 
 log "Done"
 ls -lh "$OUT"

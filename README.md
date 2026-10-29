@@ -35,15 +35,15 @@ On a Mac with Apple Silicon (or any machine with Docker):
 On arm64 Linux, `sudo ./image/build.sh` does the same without Docker. It takes the official Raspberry Pi OS Lite (64-bit) Trixie image, grows it, runs `main.yml` inside it (with `jc_image_build=true`), and writes to `image/out`:
 
 - `<date>-johnny-castaway-raspios-trixie-arm64-lite.img.xz`, the image, with its `.sha256`
-- `os_list.json`, a Raspberry Pi Imager repository listing the image
+- `repo.json`, a Raspberry Pi Imager repository listing the image
 
-By default `os_list.json` points at the image on your disk. To publish the image somewhere, set `IMAGE_URL_BASE` to the URL of the folder you'll upload it to, eg. `IMAGE_URL_BASE=https://example.com/johnny ./image/build-docker.sh`, and upload both files there.
+By default `repo.json` points at the image on your disk. To publish the image somewhere, set `IMAGE_URL_BASE` to the URL of the folder you'll upload it to, eg. `IMAGE_URL_BASE=https://example.com/johnny ./image/build-docker.sh`, and upload both files there.
 
 ### Flashing it
 
-Imager only offers its settings step for images listed in a repository, not for an image picked with "Use custom". So point Imager at `os_list.json`:
+Imager only offers its settings step for images listed in a repository, not for an image picked with "Use custom". So point Imager at `repo.json`:
 
-1. In Raspberry Pi Imager, open **App Options**, set **Content Repository** to **Use custom file** and choose `os_list.json` (or a URL to it). On a Mac you can also start it with `open -a "Raspberry Pi Imager" --args --repo /path/to/os_list.json`.
+1. In Raspberry Pi Imager, open **App Options**, set **Content Repository** to **Use custom file** and choose `repo.json` (or a URL to it). On a Mac you can also start it with `open -a "Raspberry Pi Imager" --args --repo /path/to/repo.json`.
 2. Choose your Raspberry Pi model (Zero 2 W, 3, 4 or 5), then **Johnny Castaway** as the operating system, and your SD card.
 3. Fill in the customisation settings: hostname, username and password, Wi-Fi, SSH. Then write the card.
 
