@@ -4,7 +4,7 @@
   vars:
     jc_dir: /opt/jc_reborn
     jc_repo: https://github.com/bertrandom/jc_reborn.git
-    jc_version: 28bab375c303f6fc1b07f5a49f3c2ec9e3edf838
+    jc_version: eeda766e17249893cc80fdf02a891ca790b96b59
     jc_resources_url: https://test.bert.org/johnny.zip
     jc_resources_checksum: sha256:4db347c0f57a4d92bad23234cc91034eeef5073d92a79e5ec1e0461f47393980
     jc_user: johnny
