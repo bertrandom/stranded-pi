@@ -14,8 +14,8 @@ RESOURCES_URL=${RESOURCES_URL:-https://test.bert.org/johnny.zip}
 RESOURCES_SHA256=4db347c0f57a4d92bad23234cc91034eeef5073d92a79e5ec1e0461f47393980
 
 # Initial settings, only written when not set yet: after that, change them
-# on the web page
-DEFAULT_SETTINGS="nightMode=1 nightStart=22:00 nightEnd=08:00 cec=1"
+# on the web page. Night mode is off, with hours ready for when it's turned on
+DEFAULT_SETTINGS="nightMode=0 nightStart=22:00 nightEnd=08:00 cec=1"
 
 STRANDED_DEB=${STRANDED_DEB:-}
 STRANDED_VERSION=${STRANDED_VERSION:-}

@@ -59,7 +59,7 @@ The [stranded package](https://github.com/bertrandom/stranded#debian-package) in
 | What | Where |
 | --- | --- |
 | The original game's data files (`RESOURCE.MAP`, `RESOURCE.001`, sounds), checksum-verified, from `RESOURCES_URL` | `/var/lib/stranded` |
-| Default settings: night mode on, from 22:00 to 08:00, with HDMI-CEC | `/var/lib/stranded/.stranded` |
+| Default settings: night mode off, set to 22:00 to 08:00 with HDMI-CEC for when it's turned on | `/var/lib/stranded/.stranded` |
 | No waiting for the network at boot | `NetworkManager-wait-online.service` disabled |
 | On a running Pi, cloud-init disabled | `/etc/cloud/cloud-init.disabled` |
 
@@ -97,7 +97,7 @@ There's no password: anyone on your network can change settings, restart Johnny,
 
 During the night hours Johnny pauses, the screen goes black and the Pi turns its HDMI output off, so the monitor sleeps. If the display is a TV that supports HDMI-CEC, it's put in standby too. In the morning the display comes back on and Johnny carries on where he left off.
 
-Night mode is on by default, from 22:00 to 08:00. Change the hours, or turn it off, on the web page. The page also has buttons to turn the display off or on right away; that lasts until the next scheduled switch.
+Night mode is off by default. Turn it on, and change its hours (22:00 to 08:00 by default), on the web page. The page also has buttons to turn the display off or on right away; that lasts until the next scheduled switch.
 
 ### Widescreen displays
 
