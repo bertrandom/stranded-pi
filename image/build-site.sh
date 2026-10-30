@@ -28,6 +28,17 @@ mkdir -p "$SITE_DIR/public/images"
 cp "$OUT/$name" "$OUT/$name.sha256" "$SITE_DIR/public/images/"
 cp "$OUT/repo.json" "$SITE_DIR/public/repo.json"
 
+# Only the newest KEEP_IMAGES images stay, by version: the one repo.json lists
+# and, by default, the one before it, for downloads started before a deploy.
+# The site's deploy.sh then deletes the others from the server
+KEEP_IMAGES=${KEEP_IMAGES:-2}
+ls "$SITE_DIR/public/images" | grep '\.img\.xz$' | sort -rV | tail -n "+$((KEEP_IMAGES + 1))" |
+while read -r old; do
+    [ "$old" = "$name" ] && continue
+    rm -f "$SITE_DIR/public/images/$old" "$SITE_DIR/public/images/$old.sha256"
+    echo "Removed the older image $old"
+done
+
 echo
 echo "== Copied to $SITE_DIR/public"
 ls -lh "$SITE_DIR/public/repo.json" "$SITE_DIR/public/images"
