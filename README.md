@@ -32,6 +32,10 @@ Works on the Raspberry Pi Zero 2 W, 3, 4 and 5, with Raspberry Pi OS Lite (64-bi
 
 The image is the official Raspberry Pi OS Lite (64-bit) with stranded preinstalled. [Raspberry Pi Imager](https://www.raspberrypi.com/software/) still lets you set the hostname, username and password, Wi-Fi, SSH and so on while flashing, as for Raspberry Pi OS.
 
+### Install
+
+If you just want to install the image on a Raspberry Pi, please follow the instructions at [stranded.bert.org](https://stranded.bert.org/).
+
 ### Building it
 
 On a Mac with Apple Silicon (or any machine with Docker):
