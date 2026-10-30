@@ -91,7 +91,7 @@ curl -X POST http://<your Pi>/api/toggle-pause
 curl -H 'Content-Type: application/json' -d '{"nightStart": "22:00", "nightEnd": "08:00"}' http://<your Pi>/api/settings
 ```
 
-`curl http://<your Pi>/api` lists every endpoint and setting, and [stranded's README](https://github.com/bertrandom/stranded#web-control-and-night-mode) describes them.
+`curl http://<your Pi>/api` lists every endpoint and setting, and [stranded's README](https://github.com/bertrandom/stranded#api) describes them.
 
 There's no password: anyone on your network can change settings, update or restart Johnny, or reboot and shut down the Pi. After a shutdown, the Pi stays off until it's unplugged and plugged back in.
 
