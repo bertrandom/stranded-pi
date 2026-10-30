@@ -1,5 +1,27 @@
 # stranded-pi
 
+```mermaid
+flowchart LR
+    stranded["<b>stranded</b><br>the C engine, as a Debian package"]
+    pi["<b>stranded-pi</b><br>an SD card image for the Raspberry Pi"]
+    web["<b>stranded-web</b><br>a TypeScript port for web pages"]
+    site["<b>stranded.bert.org</b><br>the landing page"]
+
+    stranded -- "Debian package" --> pi
+    stranded -- "ported to TypeScript" --> web
+    pi -- "image to download" --> site
+    web -- "Johnny playing live" --> site
+
+    click stranded href "https://github.com/bertrandom/stranded" _blank
+    click pi href "https://github.com/bertrandom/stranded-pi" _blank
+    click web href "https://github.com/bertrandom/stranded-web" _blank
+    click site href "https://github.com/bertrandom/stranded.bert.org" _blank
+
+    style pi stroke-width:4px
+```
+
+[stranded](https://github.com/bertrandom/stranded) · [stranded-pi](https://github.com/bertrandom/stranded-pi) · [stranded-web](https://github.com/bertrandom/stranded-web) · [stranded.bert.org](https://github.com/bertrandom/stranded.bert.org)
+
 Turn a Raspberry Pi into a Johnny Castaway screen: the 1992 screen saver, playing full screen on the Pi's HDMI output, with a web page to control it and a night mode that turns the display off at night.
 
 It runs [stranded](https://github.com/bertrandom/stranded), an open source engine for the screen saver (a fork of [Johnny Reborn](https://github.com/jno6809/jc_reborn)), installed as a Debian package. This repository builds a ready-to-flash SD card image with it, and has a script to set it up on a Pi that's already running Raspberry Pi OS.
