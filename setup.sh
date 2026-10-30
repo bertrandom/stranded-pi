@@ -10,7 +10,7 @@
 set -euo pipefail
 
 # The original game's data files, which can't be distributed with stranded
-RESOURCES_URL=${RESOURCES_URL:-https://test.bert.org/johnny.zip}
+RESOURCES_URL=${RESOURCES_URL:-https://stranded.bert.org/resources/johnny.zip}
 RESOURCES_SHA256=4db347c0f57a4d92bad23234cc91034eeef5073d92a79e5ec1e0461f47393980
 
 # Initial settings, only written when not set yet: after that, change them

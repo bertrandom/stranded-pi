@@ -27,6 +27,8 @@ It installs the latest [stranded release](https://github.com/bertrandom/stranded
 
 By default `repo.json` points at the image on your disk. To publish the image somewhere, set `IMAGE_URL_BASE` to the URL of the folder you'll upload it to, eg. `IMAGE_URL_BASE=https://example.com/stranded ./image/build-docker.sh`, and upload both files there. Keep in mind that the image includes the original game's data files.
 
+`./image/build-site.sh` builds it for [stranded.bert.org](https://stranded.bert.org): it sets `IMAGE_URL_BASE` to `https://stranded.bert.org/images`, then copies `repo.json` into the site's `public/` and the image into `public/images/`. It expects the site's checkout next to this one, or set `SITE_DIR`.
+
 ### Flashing it
 
 Imager only offers its settings step for images listed in a repository, not for an image picked with "Use custom". So point Imager at `repo.json`:
